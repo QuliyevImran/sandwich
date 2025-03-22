@@ -11,7 +11,7 @@ class DB_Map():
     def __init__(self, database):
         self.database = database
 
-    def create_graph(self, path, cities):
+    def create_graph(self, path, cities, marker_color='red'):
         fig = plt.figure(figsize=(10, 5))
         ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree())
         ax.stock_img()
@@ -20,7 +20,7 @@ class DB_Map():
             coordinates = self.get_coordinates(city)
             if coordinates:
                 lat, lng = coordinates
-                ax.plot(lng, lat, marker='o', color='red', markersize=5, transform=ccrs.PlateCarree())
+                ax.plot(lng, lat, marker='o', color=marker_color, markersize=5, transform=ccrs.PlateCarree())
                 ax.text(lng + 0.5, lat + 0.5, city, fontsize=9, transform=ccrs.PlateCarree())
         
         plt.savefig(path)
@@ -83,15 +83,17 @@ def handle_start(message):
 
 @bot.message_handler(commands=['help'])
 def handle_help(message):
-    bot.send_message(message.chat.id, "Доступные команды:\n/show_city <город> - показать город на карте\n/show_my_cities - показать все сохраненные города\n/remember_city <город> - сохранить город")
+    bot.send_message(message.chat.id, "Доступные команды:\n/show_city <город> <цвет> - показать город на карте\n/show_my_cities <цвет> - показать все сохраненные города\n/remember_city <город> - сохранить город")
 
 @bot.message_handler(commands=['show_city'])
 def handle_show_city(message):
-    city_name = message.text.split(maxsplit=1)[-1]
+    args = message.text.split()
+    city_name = args[1] if len(args) > 1 else None
+    marker_color = args[2] if len(args) > 2 else 'red'
     path = f"{city_name}.png"
     coordinates = m.get_coordinates(city_name)
     if coordinates:
-        m.create_graph(path, [city_name])
+        m.create_graph(path, [city_name], marker_color)
         with open(path, 'rb') as photo:
             bot.send_photo(message.chat.id, photo)
     else:
@@ -108,10 +110,12 @@ def handle_remember_city(message):
 
 @bot.message_handler(commands=['show_my_cities'])
 def handle_show_visited_cities(message):
+    args = message.text.split()
+    marker_color = args[1] if len(args) > 1 else 'red'
     cities = m.select_cities(message.chat.id)
     if cities:
         path = "my_cities.png"
-        m.create_graph(path, cities)
+        m.create_graph(path, cities, marker_color)
         with open(path, 'rb') as photo:
             bot.send_photo(message.chat.id, photo)
     else:
